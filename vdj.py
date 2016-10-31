@@ -1,8 +1,18 @@
 import sys
+import os
 import argparse
 import random
 
 
+#checks for valid files within argparse
+def validFile (fileName):
+    base, ext = os.path.splitext(fileName)
+    if ext.lower() not in ('.fasta'):
+        raise argparse.ArgumentTypeError('Error, requires .fasta file')
+
+    return fileName
+            
+        
 #parses V, D, J files and concats their base pairs together
 def parse(fileP):
 
@@ -34,15 +44,17 @@ def randomCombine(V, D, J, k):
     
 def main():
 
+    #defining the argument parser
     parser = argparse.ArgumentParser(description='Process V, D, and J files with k iterations')
     
-    parser.add_argument('-v', '--vgene', dest='vGene', help = "V gene .fasta file here")
-    parser.add_argument('-d', '--dgene', dest='dGene', help = "D gene .fasta file here")
-    parser.add_argument('-j', '--jgene', dest='jGene', help = "J gene .fasta file here")
-    parser.add_argument('-k', dest='kIter', help = "# of iterations")
+    parser.add_argument('-v', '--vgene', dest='vGene', type = validFile, help = "V gene .fasta file here")
+    parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, help = "D gene .fasta file here")
+    parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, help = "J gene .fasta file here")
+    parser.add_argument('-k', dest='kIter', type = float, help = "# of iterations")
+    
                                  
     args = parser.parse_args()
-    
+
 
     fileV = open(args.vGene, 'r')
     fileD = open(args.dGene, 'r')
