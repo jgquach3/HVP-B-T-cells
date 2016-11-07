@@ -50,7 +50,7 @@ def main():
     parser.add_argument('-v', '--vgene', dest='vGene', type = validFile, help = "V gene .fasta file here")
     parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, help = "D gene .fasta file here")
     parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, help = "J gene .fasta file here")
-    parser.add_argument('-k', dest='kIter', type = float, help = "# of iterations")
+    parser.add_argument('-k', dest='kIter', type = int, help = "# of iterations")
     
                                  
     args = parser.parse_args()
@@ -64,6 +64,6 @@ def main():
     dictD = parse(fileD)
     dictJ = parse(fileJ)
 
-    randomCombine(dictV, dictD, dictJ, int(args.kIter))
+    randomCombine(dictV, dictD, dictJ, args.kIter)
 
 main()
