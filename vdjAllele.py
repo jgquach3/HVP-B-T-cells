@@ -1,6 +1,7 @@
 import sys
 import os
 import argparse
+from datetime import datetime
 import random
 
 #checks for valid files within argparse V, D, J selection
@@ -51,18 +52,32 @@ def compare(aFile):
     return vList, dList, jList
 
 #randomly takes 1 value from each V,D, and J list and generates sequences
-#based on k iterations
-def rPrint(gList, V, D, J, k):
+#based on k iterations, also creates a seed based on the current time
+#in microseconds if no seed is provided
+
+#output: > V key, D key, J key, | random seed
+def rPrint(gList, V, D, J, k, r):
+    
+    if isinstance(r, bool):
+        dt = datetime.now()
+        r = dt.microsecond
+
+    random.seed(r)
 
     for i in range(0, k):
         vKey = random.choice(gList[0])
         dKey = random.choice(gList[1])
         jKey = random.choice(gList[2])
 
-        print ('>' + ", ".join((vKey, dKey, jKey)))
+        print ('>' + ", ".join((vKey, dKey, jKey)) + " | " + str(r))
         print ("".join((V[vKey], D[dKey], J[jKey])))
 
-    
+#takes 6 arguments
+#3 .fasta files for the vgenes, dgenes, and j genes
+#1 .txt file that contains a subset of genes and their alleles
+#1 int that determines how many iterations of sequences
+#1 int the random seed
+        
 def main():
     parser = argparse.ArgumentParser(description='Process specific alleles of V, D, and J')
     
@@ -70,15 +85,22 @@ def main():
     parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, help = "D gene .fasta file")
     parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, help = "J gene .fasta file")
 
-    parser.add_argument('-k', dest='kIter', type = int, help = "# of iterations")
-
     parser.add_argument('-a', '--allele', dest='aFile', help = "Total allele .txt file"
                         " and their respective allele. Currently formatted as just the gene with the "
                         " attached allele followed by new line character. Ex: IGHD1*01\\nIGHD2*01\\n...")
 
+    parser.add_argument('-k', dest='kIter', type = int, help = "# of iterations")
+    
+    parser.add_argument('-r', dest='rSeed', type = int, help = "Optional random seed input"
+                        " Otherwise will generate seed for the current data")
+
 
     args = parser.parse_args()
 
+    if args.rSeed:
+        rNum = args.rSeed
+    else:
+        rNum = False
 
     vFile = open(args.vGene, 'r')
     dFile = open(args.dGene, 'r')
@@ -91,7 +113,7 @@ def main():
 
     gList = compare(aFile)
 
-    rPrint (gList, dictV, dictD, dictJ, args.kIter)
+    rPrint (gList, dictV, dictD, dictJ, args.kIter, rNum)
 
 
 main()
