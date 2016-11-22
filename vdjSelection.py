@@ -1,8 +1,9 @@
 import sys
 import os
 import argparse
-from datetime import datetime
 import random
+from bisect import bisect
+
 
 #checks for valid files within argparse V, D, J selection
 def validFile (fileName):
@@ -12,6 +13,15 @@ def validFile (fileName):
 
     return fileName
 
+#partitions a bp list based on set percentages
+def basePartition (value, bPoint):
+
+    bp = 'atcg'
+    i = bisect(bPoint, value)
+
+    return bp[i]
+
+    
 #parses V, D, J files and concats their base pairs together
 def parse(fileP):
 
@@ -52,32 +62,28 @@ def compare(aFile):
     return vList, dList, jList
 
 #randomly takes 1 value from each V,D, and J list and generates sequences
-#based on k iterations, also creates a seed based on the current time
-#in microseconds if no seed is provided
+#based on k iterations
+#if additions are specified, compute and add those in between as well
+def rPrint(gList, V, D, J, k, t1, t2):
 
-#output: > V key, D key, J key, | random seed
-def rPrint(gList, V, D, J, k, r):
+    bPoint = [25, 50, 75, 100]
     
-    if isinstance(r, bool):
-        dt = datetime.now()
-        r = dt.microsecond
-
-    random.seed(r)
-
     for i in range(0, k):
+
+        vdBP = [random.randint(0, 99) for i in range(0, t1*3)]
+        djBP = [random.randint(0, 99) for i in range(0, t2*3)]
+    
+        vdAdd = ''.join([basePartition(value, bPoint) for value in vdBP])
+        djAdd = ''.join([basePartition(value, bPoint) for value in djBP])
+        
         vKey = random.choice(gList[0])
         dKey = random.choice(gList[1])
         jKey = random.choice(gList[2])
 
-        print ('>' + ", ".join((vKey, dKey, jKey)) + " | " + str(r))
-        print ("".join((V[vKey], D[dKey], J[jKey])))
+        print ('>' + ", ".join((vKey, dKey, jKey)))
+        print ("".join((V[vKey], vdAdd, D[dKey], djAdd, J[jKey])))
 
-#takes 6 arguments
-#3 .fasta files for the vgenes, dgenes, and j genes
-#1 .txt file that contains a subset of genes and their alleles
-#1 int that determines how many iterations of sequences
-#1 int the random seed
-        
+    
 def main():
     parser = argparse.ArgumentParser(description='Process specific alleles of V, D, and J')
     
@@ -85,35 +91,32 @@ def main():
     parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, help = "D gene .fasta file")
     parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, help = "J gene .fasta file")
 
+    parser.add_argument('-k', dest='kIter', type = int, help = "# of iterations")
+
     parser.add_argument('-a', '--allele', dest='aFile', help = "Total allele .txt file"
                         " and their respective allele. Currently formatted as just the gene with the "
                         " attached allele followed by new line character. Ex: IGHD1*01\\nIGHD2*01\\n...")
 
-    parser.add_argument('-k', dest='kIter', type = int, help = "# of iterations")
+    parser.add_argument('-tAdd1', dest='tAdd1', type = int, default = 0,
+                        help = "# of triplets to be added inbetween V and D gene, default = 0")
+    parser.add_argument('-tAdd2', dest='tAdd2', type = int, default = 0,
+                        help = "# of triplets to be added inbetween D and J gene, default = 0")
     
-    parser.add_argument('-r', dest='rSeed', type = int, help = "Optional random seed input"
-                        " Otherwise will generate seed for the current data")
-
-
     args = parser.parse_args()
 
-    if args.rSeed:
-        rNum = args.rSeed
-    else:
-        rNum = False
 
+    aFile = open(args.aFile, 'r')
     vFile = open(args.vGene, 'r')
     dFile = open(args.dGene, 'r')
     jFile = open(args.jGene, 'r')
-    aFile = open(args.aFile, 'r')
 
     dictV = parse(vFile)
     dictD = parse(dFile)
     dictJ = parse(jFile)
-
+    
     gList = compare(aFile)
 
-    rPrint (gList, dictV, dictD, dictJ, args.kIter, rNum)
+    rPrint (gList, dictV, dictD, dictJ, args.kIter, args.tAdd1, args.tAdd2)
 
 
 main()
