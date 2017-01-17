@@ -112,11 +112,14 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, r):
         dKey = random.choice(gList[1])
         jKey = random.choice(gList[2])
 
+    
         vdAdd = ''.join(vdAdd)
         djAdd = ''.join (djAdd)
         
         print ('>' + ", ".join((vKey, dKey, jKey)))
-        print ("".join((V[vKey], vdAdd, D[dKey], djAdd, J[jKey])))
+        unchangedD = D[dKey]
+        delD = unchangedD[d1:-d2]
+        print ("".join((V[vKey], vdAdd, delD, djAdd, J[jKey])))
 
     print ('\nrandom seed: ' + str(r))
 
