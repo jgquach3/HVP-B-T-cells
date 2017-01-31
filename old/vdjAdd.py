@@ -2,14 +2,8 @@ import sys
 import os
 import argparse
 import random
-import math
 from datetime import datetime
 from bisect import bisect
-
-
-#Globals#
-bPoint = [25, 50, 75, 100]
-
 
 
 #checks for valid files within argparse V, D, J selection
@@ -40,17 +34,9 @@ def frameBlocker(a1, d1, a2, d2):
         d2 = int(input ('Enter a new value for del2: '))
     
     return a1, d1, a2, d2       
-
-#checks to see if the user input of the mutation rate is valid: between 0 - 100%
-def percentMut (m):
-
-    while (m > 100 or m < 0):
-        print ('Mutation rate is a percentage between 0 and 100')
-
-        m = int(input('Entr a new value for the mutation rate: '))
-
-    return int(m)
+            
     
+
 #partitions a bp list based on set percentages
 def basePartition (value, bPoint):
 
@@ -104,77 +90,21 @@ def compare(aFile):
 #generated and regenerates the sequence if needed
 def addNuc(k):
 
+    bPoint = [25, 50, 75, 100]
+
     add = [random.randint(0, 99) for i in range(0, k)]
     codonAdd = [basePartition(value, bPoint) for value in add]
 
-
-    check = True
-    while check == True:
-
-        if ('tag' or 'taa' or 'tga') in codonAdd:
+    check = 1
+    while check == 1:
+        
+        if 'tag' or 'taa' or 'tga' in codonAdd:
             add = [random.randint(0, 99) for i in range(0, k)]
             codonAdd = [basePartition(value, bPoint) for value in add]
-
-        else:
-            check = False
-    
-    return codonAdd
-
-
-#applies the mutation percentage to every base within the string and
-#mutates the bases if applicable
-#also checks if there are any stop codons and adjusts them if there are
-def mutation (chain, m):
-
-    chain = list(chain)
-    
-    for i in range(len(chain)):
-
-        rate = random.randint(0, 101)
-
-        if (rate >= m):
-
-            baseNumber = random.randint(0,99)
-            nBase = basePartition(baseNumber, bPoint)
-            chain[i] = nBase
-
-    chain = ''.join(chain)
-
-    #arbitrarily large (int) to ensure that other possible copies of
-    #stop codons are handled and replaced
-    i = 10000000000000000000000000000
-    
-    check = True
-    while check == True:
-
-        if 'tag' in chain:
-
-            nC = [random.randint(0, 99) for i in range(0, 3)]
-            nCodon = [basePartition(value, bPoint) for value in nC]
-            nCodon = ''.join(nCodon)
-            chain = chain.replace('tag', nCodon, i)
-            continue
-                
-        elif 'taa' in chain:
-
-            nC = [random.randint(0, 99) for i in range(0, 3)]
-            nCodon = [basePartition(value, bPoint) for value in nC]
-            nCodon = ''.join(nCodon)
-            chain = chain.replace('taa', nCodon, i)
-            continue                
-        elif 'tga' in chain:
-
-            nC = [random.randint(0, 99) for i in range(0, 3)]
-            nCodon = [basePartition(value, bPoint) for value in nC]
-            nCodon = ''.join(nCodon)
-            chain = chain.replace('tga', nCodon, i)
-            continue
-
-        else:
             
-            check = False
+        check = 0
 
-    return chain
+    return codonAdd
 
         
 #randomly takes 1 value from each V,D, and J list and generates sequences
@@ -182,8 +112,9 @@ def mutation (chain, m):
 #if additions/deletions are specified, compute and add those in front or behind
 #the d gene when printing
 #also specifies the random seed
-def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
+def rPrint(gList, V, D, J, k, a1, d1, a2, d2, r):
 
+    bPoint = [25, 50, 75, 100]
 
     if isinstance(r, bool):
         dt = datetime.now()
@@ -212,10 +143,8 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
             delD = unchangedD
         else:
             delD = unchangedD[d1:-d2]
-
-        combStr = "".join((V[vKey], vdAdd, delD, djAdd, J[jKey]))
-        mutStr = mutation(combStr, m)
-        print (mutStr)
+        
+        print ("".join((V[vKey], vdAdd, delD, djAdd, J[jKey])))
 
     print ('\nrandom seed: ' + str(r))
 
@@ -223,12 +152,9 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
 def main():
     parser = argparse.ArgumentParser(description='Process specific alleles of V, D, and J')
     
-    parser.add_argument('-v', '--vgene', dest='vGene', type = validFile, required = True,
-                        help = "V gene .fasta file")
-    parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, required = True,
-                        help = "D gene .fasta file")
-    parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, required = True,
-                        help = "J gene .fasta file")
+    parser.add_argument('-v', '--vgene', dest='vGene', type = validFile, required = True, help = "V gene .fasta file")
+    parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, required = True, help = "D gene .fasta file")
+    parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, required = True, help = "J gene .fasta file")
 
     parser.add_argument('-k', dest='kIter', type = int, required = True, help = "# of iterations")
 
@@ -245,9 +171,6 @@ def main():
     parser.add_argument('-nd2', dest='nDel2', type = int, default = 0,
                         help = "# of nucleotides to be deleted inbetween D and J gene, default = 0")
 
-    parser.add_argument('-m', dest = 'mut', type = int, default = 0,
-                        help = "% of each base mutating into another base")
-
     parser.add_argument('-r', dest='rSeed', type = int, help = "Optional random seed input"
                         " Otherwise will generate seed for the current data")
     
@@ -260,8 +183,6 @@ def main():
         rNum = False
         
     a1, d1, a2, d2 = frameBlocker(args.nAdd1, args.nDel1, args.nAdd2, args.nDel2)
-    m = percentMut(args.mut)
-    
 
     aFile = open(args.aFile, 'r')
     vFile = open(args.vGene, 'r')
@@ -275,7 +196,7 @@ def main():
     gList = compare(aFile)
 
     rPrint (gList, dictV, dictD, dictJ, args.kIter, a1, d1,
-            a2, d2, m, rNum)
+            a2, d2, rNum)
 
 
 main()
