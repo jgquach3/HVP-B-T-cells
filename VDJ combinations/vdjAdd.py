@@ -3,16 +3,11 @@ import os
 import argparse
 import random
 import math
-import warnings
-from Bio import BiopythonWarning
 from Bio.Seq import Seq
 from datetime import datetime
 from bisect import bisect
 
-
 #Globals#
-
-warnings.simplefilter('ignore', BiopythonWarning)
 
 #percentages of each base pair, can be changed to simulate different percentages
 #current order = ACTG
@@ -133,16 +128,19 @@ def compare(aFile):
 #and if it satisfies the following pattern: {X} - {W} - {X}8 - {SS}
 def readingFrameChecker(seq):
 
-    rf1 = Seq.translate(Seq(seq))
-    rf2 = Seq.translate(Seq(str(seq[1:])))
-    rf3 = Seq.translate(Seq(str(seq[2:])))
-
+    rf = []
     check = False
+    
+    for i in range(3):
+        splice = seq[i:]
 
-    for frame in [rf1, rf2, rf3]:
+        #removes partial codons by removing bases from end of sequence
+        splice = splice[:(len(splice) - len(splice)%3)]
+        rf.append(Seq.translate(Seq(splice)))
+
+    for frame in rf:
         
         if frame[-11] == 'W' and frame[-2:] == 'SS':
-
             check = True
             break
         else:
