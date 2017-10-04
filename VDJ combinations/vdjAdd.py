@@ -3,14 +3,16 @@ import os
 import argparse
 import random
 import math
+from Bio.Seq import Seq
 from datetime import datetime
 from bisect import bisect
 
 
 #Globals#
+
+#percentages of each base pair, can be changed to simulate different percentages
+#current order = ACTG
 bPoint = [25, 50, 75, 100]
-
-
 
 #checks for valid files within argparse V, D, J selection
 def validFile (fileName):
@@ -19,27 +21,7 @@ def validFile (fileName):
         raise argparse.ArgumentTypeError('Error, requires .fasta file')
 
     return fileName
-
-#prevents frame shift mutations by ensuring that the user inputted values
-#for both additions and deletions have a (delta) that is divisible by 3
-def frameBlocker(a1, d1, a2, d2):
-    
-    if ((a1-d1)%3 + (a2-d2)%3 == 0):
-        return a1, d1, a2, d2
-
-    while ((a1-d1)%3 != 0):
-        print ('Enter new values for Add1 and Del1 so that their difference '
-               'when modded by 3 produces a result of 0')
-        a1 = int(input ('Enter a new value for add1: '))
-        d1 = int(input ('Enter a new value for del1: '))
-
-    while ((a2-d2)%3 != 0):
-        print ('Enter new values for Add2 and Del2 so that their difference '
-               'when modded by 3 produces a result of 0')
-        a2 = int(input ('Enter a new value for add2: '))
-        d2 = int(input ('Enter a new value for del2: '))
-    
-    return a1, d1, a2, d2       
+  
 
 #checks to see if the user input of the mutation rate is valid: between 0 - 100%
 def percentMut (m):
@@ -47,11 +29,51 @@ def percentMut (m):
     while (m > 100 or m < 0):
         print ('Mutation rate is a percentage between 0 and 100')
 
-        m = int(input('Entr a new value for the mutation rate: '))
+        m = int(input('Enter a new value for the mutation rate: '))
 
     return int(m)
+
+#checks for stop codons and randomly changes them to another protein
+def stopChecker(chain):
+
+    #arbitrarily large int to handle multiple creations of stop codons
+    i = 1000000000
     
-#partitions a bp list based on set percentages
+    check = True
+    while check == True:
+
+        if 'tag' in chain:
+
+            nC = [random.randint(0, 99) for i in range(0, 3)]
+            nCodon = [basePartition(value, bPoint) for value in nC]
+            nCodon = ''.join(nCodon)
+            chain = chain.replace('tag', nCodon, i)
+            continue
+                
+        elif 'taa' in chain:
+
+            nC = [random.randint(0, 99) for i in range(0, 3)]
+            nCodon = [basePartition(value, bPoint) for value in nC]
+            nCodon = ''.join(nCodon)
+            chain = chain.replace('taa', nCodon, i)
+            continue
+        
+        elif 'tga' in chain:
+
+            nC = [random.randint(0, 99) for i in range(0, 3)]
+            nCodon = [basePartition(value, bPoint) for value in nC]
+            nCodon = ''.join(nCodon)
+            chain = chain.replace('tga', nCodon, i)
+            continue
+
+        else:
+            
+            check = False
+
+    return chain
+    
+
+#partitions a base pair list based on set percentages
 def basePartition (value, bPoint):
 
     bp = 'atcg'
@@ -100,23 +122,35 @@ def compare(aFile):
     return vList, dList, jList
 
 
-#checks to see if there are any stop codons within the sequence being
-#generated and regenerates the sequence if needed
+#checks to see if sequence belongs to reading frame:
+#1 - no additional nucleotides
+#2 - 1 additional nucleotide
+#3 - 2 additional nucleotides
+#and if it satisfies the following pattern: {X} - {W} - {X}8 - {SS}
+def readingFrameChecker(seq):
+
+    rf1 = Seq.translate(Seq(seq))
+    rf2 = Seq.translate(Seq(str(seq[1:])))
+    rf3 = Seq.translate(Seq(str(seq[2:])))
+
+    check = False
+
+    for frame in [rf1, rf2, rf3]:
+
+        if frame[-11] == 'W' and frame[-2:] == 'SS':
+
+            check = True
+            break
+        else:
+            continue
+
+    return check
+
+#generate nucleotide sequence based on specificed base parition with <k> bases
 def addNuc(k):
 
     add = [random.randint(0, 99) for i in range(0, k)]
     codonAdd = [basePartition(value, bPoint) for value in add]
-
-
-    check = True
-    while check == True:
-
-        if ('tag' or 'taa' or 'tga') in codonAdd:
-            add = [random.randint(0, 99) for i in range(0, k)]
-            codonAdd = [basePartition(value, bPoint) for value in add]
-
-        else:
-            check = False
     
     return codonAdd
 
@@ -132,47 +166,14 @@ def mutation (chain, m):
 
         rate = random.randint(0, 101)
 
-        if (rate >= m):
+        if (rate <= m):
 
             baseNumber = random.randint(0,99)
             nBase = basePartition(baseNumber, bPoint)
             chain[i] = nBase
 
-    chain = ''.join(chain)
-
-    #arbitrarily large (int) to ensure that other possible copies of
-    #stop codons are handled and replaced
-    i = 10000000000000000000000000000
-    
-    check = True
-    while check == True:
-
-        if 'tag' in chain:
-
-            nC = [random.randint(0, 99) for i in range(0, 3)]
-            nCodon = [basePartition(value, bPoint) for value in nC]
-            nCodon = ''.join(nCodon)
-            chain = chain.replace('tag', nCodon, i)
-            continue
-                
-        elif 'taa' in chain:
-
-            nC = [random.randint(0, 99) for i in range(0, 3)]
-            nCodon = [basePartition(value, bPoint) for value in nC]
-            nCodon = ''.join(nCodon)
-            chain = chain.replace('taa', nCodon, i)
-            continue                
-        elif 'tga' in chain:
-
-            nC = [random.randint(0, 99) for i in range(0, 3)]
-            nCodon = [basePartition(value, bPoint) for value in nC]
-            nCodon = ''.join(nCodon)
-            chain = chain.replace('tga', nCodon, i)
-            continue
-
-        else:
-            
-            check = False
+    #check for stop codons
+    chain = stopChecker(''.join(chain))
 
     return chain
 
@@ -184,14 +185,16 @@ def mutation (chain, m):
 #also specifies the random seed
 def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
 
-
     if isinstance(r, bool):
         dt = datetime.now()
         r = dt.microsecond
 
     random.seed(r)
+
+    #increment variable for sucessful creations of vdj
+    inc = 0
     
-    for i in range(0, k):
+    while inc < k:
     
         vdAdd = addNuc(a1)
         djAdd = addNuc(a2)
@@ -202,11 +205,11 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
 
     
         vdAdd = ''.join(vdAdd)
-        djAdd = ''.join (djAdd)
+        djAdd = ''.join(djAdd)
         
         print ('>' + ", ".join((vKey, dKey, jKey)))
 
-        
+        #only deleted on D gene, does not address possible deletion on V/J
         unchangedD = D[dKey]
         if d1 == 0 and d2 == 0:
             delD = unchangedD
@@ -214,7 +217,18 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
             delD = unchangedD[d1:-d2]
 
         combStr = "".join((V[vKey], vdAdd, delD, djAdd, J[jKey]))
-        mutStr = mutation(combStr, m)
+
+        #check for stop codons
+        combStr = stopChecker(combStr)
+
+        patternCheck = readingFrameChecker(combStr.upper())
+
+        if patternCheck == True:
+            inc = inc + 1
+        else:
+            continue
+        
+        mutStr = mutation(combStr, m)        
         print (mutStr)
 
     print ('\nrandom seed: ' + str(r))
@@ -259,9 +273,7 @@ def main():
     else:
         rNum = False
         
-    a1, d1, a2, d2 = frameBlocker(args.nAdd1, args.nDel1, args.nAdd2, args.nDel2)
     m = percentMut(args.mut)
-    
 
     aFile = open(args.aFile, 'r')
     vFile = open(args.vGene, 'r')
@@ -274,8 +286,8 @@ def main():
     
     gList = compare(aFile)
 
-    rPrint (gList, dictV, dictD, dictJ, args.kIter, a1, d1,
-            a2, d2, m, rNum)
+    rPrint (gList, dictV, dictD, dictJ, args.kIter, args.nAdd1, args.nDel1,
+            args.nAdd2, args.nDel2, m, rNum)
 
 
 main()
