@@ -3,12 +3,16 @@ import os
 import argparse
 import random
 import math
+import warnings
+from Bio import BiopythonWarning
 from Bio.Seq import Seq
 from datetime import datetime
 from bisect import bisect
 
 
 #Globals#
+
+warnings.simplefilter('ignore', BiopythonWarning)
 
 #percentages of each base pair, can be changed to simulate different percentages
 #current order = ACTG
@@ -136,7 +140,7 @@ def readingFrameChecker(seq):
     check = False
 
     for frame in [rf1, rf2, rf3]:
-
+        
         if frame[-11] == 'W' and frame[-2:] == 'SS':
 
             check = True
