@@ -148,6 +148,16 @@ def readingFrameChecker(seq):
 
     return check
 
+#sets various nucleotide modification varibles to a number between a specified threshold
+def thresholdSet(l, start, end):
+
+    r = random.randint(start, end)
+    for i in range(len(l)):
+        if l[i] == 0:
+            l[i] = r
+            
+    return l
+    
 #generate nucleotide sequence based on specificed base parition with <k> bases
 def addNuc(k):
 
@@ -156,6 +166,21 @@ def addNuc(k):
     
     return codonAdd
 
+#random nucleotide addition and deletion
+#randomizes whether addition or deletion occurs first on the gene
+#for addition and deletion to the d gene reverse and unreverse
+def randomNucMod(gene, addN, delN):
+
+    rand = random.random()
+    addition = ''.join(addNuc(addN))
+
+    #do addition first
+    if rand > 0.5:
+        modGene = ''.join([gene, addition])[:-delN]
+    else:
+        modGene = ''.join([gene[:-delN], addition])
+        
+    return modGene
 
 #applies the mutation percentage to every base within the string and
 #mutates the bases if applicable
@@ -179,13 +204,13 @@ def mutation (chain, m):
 
     return chain
 
-        
+
 #randomly takes 1 value from each V,D, and J list and generates sequences
 #based on k iterations
 #if additions/deletions are specified, compute and add those in front or behind
 #the d gene when printing
 #also specifies the random seed
-def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
+def rPrint(gList, V, D, J, k, nav, ndv, nad5, nad3, ndd5, ndd3, naj, ndj, m, r):
 
     if isinstance(r, bool):
         dt = datetime.now()
@@ -197,28 +222,21 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
     inc = 0
     
     while inc < k:
-    
-        vdAdd = addNuc(a1)
-        djAdd = addNuc(a2)
-        
+
         vKey = random.choice(gList[0])
         dKey = random.choice(gList[1])
         jKey = random.choice(gList[2])
 
-    
-        vdAdd = ''.join(vdAdd)
-        djAdd = ''.join(djAdd)
+        vGene = randomNucMod(V[vKey], nav, ndv)
+        #tail modification
+        dGene = randomNucMod(D[dKey], nad3, ndd3)
+        #head modification
+        dGene = ''.join(reversed(randomNucMod(''.join(reversed(dGene)), nad5, ndd5)))        
+        jGene = ''.join(reversed(randomNucMod(''.join(reversed(J[jKey])), naj, ndj)))
         
         print ('>' + ", ".join((vKey, dKey, jKey)))
 
-        #only deleted on D gene, does not address possible deletion on V/J
-        unchangedD = D[dKey]
-        if d1 == 0 and d2 == 0:
-            delD = unchangedD
-        else:
-            delD = unchangedD[d1:-d2]
-
-        combStr = "".join((V[vKey], vdAdd, delD, djAdd, J[jKey]))
+        combStr = "".join((vGene, dGene, jGene))
 
         #check for stop codons
         combStr = stopChecker(combStr)
@@ -238,34 +256,55 @@ def rPrint(gList, V, D, J, k, a1, d1, a2, d2, m, r):
     
 def main():
     parser = argparse.ArgumentParser(description='Process specific alleles of V, D, and J')
-    
+
+    #vdj files args
     parser.add_argument('-v', '--vgene', dest='vGene', type = validFile, required = True,
                         help = "V gene .fasta file")
     parser.add_argument('-d', '--dgene', dest='dGene', type = validFile, required = True,
                         help = "D gene .fasta file")
     parser.add_argument('-j', '--jgene', dest='jGene', type = validFile, required = True,
                         help = "J gene .fasta file")
-
-    parser.add_argument('-k', dest='kIter', type = int, required = True, help = "# of iterations")
-
     parser.add_argument('-a', '--allele', dest='aFile', required = True, help = "Total allele .txt file"
                         " and their respective allele. Currently formatted as just the gene with the "
                         " attached allele followed by new line character. Ex: IGHD1*01\\nIGHD2*01\\n...")
 
-    parser.add_argument('-na1', dest='nAdd1', type = int, default = 0,
-                        help = "# of nucleotides to be added inbetween V and D gene, default = 0")
-    parser.add_argument('-nd1', dest='nDel1', type = int, default = 0,
-                        help = "# of nucleotides to be deleted inbetween V and D gene, default = 0")
-    parser.add_argument('-na2', dest='nAdd2', type = int, default = 0,
-                        help = "# of nucleotides to be added inbetween D and J gene, default = 0")
-    parser.add_argument('-nd2', dest='nDel2', type = int, default = 0,
-                        help = "# of nucleotides to be deleted inbetween D and J gene, default = 0")
+    #nucleotide modification args
+    parser.add_argument('-maxi', dest = 'maxI', type = int, default = 4,
+                        help = "max number of insertions possible for each junction, will get overrided"
+                        + "by a manual specification default = 4")
+    parser.add_argument('-mini', dest = 'minI', type = int, default = 4,
+                        help = "min number of insertions possible for each junction, will get overrided"
+                        + "by a manual specification, default = 4")
+    parser.add_argument('-maxd', dest = 'maxD', type = int, default = 4,
+                        help = "max number of deletions possible for each junction, will get overrided"
+                        + "by a manual specification default = 4")
+    parser.add_argument('-mind', dest = 'minD', type = int, default = 4,
+                        help = "min number of deletions possible for each junction, will get overrided"
+                        + "by a manual specification, default = 4")
 
+    parser.add_argument('-nav', dest='nav', type = int, default = 0,
+                        help = "# of nucleotides to be added to the V gene, default = 0")
+    parser.add_argument('-ndv', dest='ndv', type = int, default = 0,
+                        help = "# of nucleotides to be deleted from the V gene, default = 0")
+    parser.add_argument('-nad5', dest='nad5', type = int, default = 0,
+                        help = "# of nucleotides to be added to the D gene on the 5' end, default = 0")
+    parser.add_argument('-nad3', dest='nad3', type = int, default = 0,
+                        help = "# of nucleotides to be added to the D gene on the 3' end, default = 0")
+    parser.add_argument('-ndd5', dest='ndd5', type = int, default = 0,
+                        help = "# of nucleotides to be deleted from the D gene on the 5' end, default = 0")
+    parser.add_argument('-ndd3', dest='ndd3', type = int, default = 0,
+                        help = "# of nucleotides to be deleted the D gene on the 3' end, default = 0")
+    parser.add_argument('-naj', dest='naj', type = int, default = 0,
+                        help = "# of nucleotides to be added to the J gene, default = 0")
+    parser.add_argument('-ndj', dest='ndj', type = int, default = 0,
+                        help = "# of nucleotides to be deleted from the J gene, default = 0")
+    
+    #misc arg variables
     parser.add_argument('-m', dest = 'mut', type = int, default = 0,
                         help = "% of each base mutating into another base")
-
     parser.add_argument('-r', dest='rSeed', type = int, help = "Optional random seed input"
                         " Otherwise will generate seed for the current data")
+    parser.add_argument('-k', dest='kIter', type = int, required = True, help = "# of iterations")
     
     args = parser.parse_args()
 
@@ -276,6 +315,9 @@ def main():
         rNum = False
         
     m = percentMut(args.mut)
+
+    addL = thresholdSet([args.nav, args.nad5, args.nad3, args.naj], args.maxI, args.minI)
+    delL = thresholdSet([args.ndv, args.ndd5, args.ndd3, args.ndj], args.maxD, args.minD)
 
     aFile = open(args.aFile, 'r')
     vFile = open(args.vGene, 'r')
@@ -288,8 +330,8 @@ def main():
     
     gList = compare(aFile)
 
-    rPrint (gList, dictV, dictD, dictJ, args.kIter, args.nAdd1, args.nDel1,
-            args.nAdd2, args.nDel2, m, rNum)
+    rPrint (gList, dictV, dictD, dictJ, args.kIter, addL[0], delL[0], addL[1], addL[2],
+            delL[1], delL[2], addL[3], delL[3], m, rNum)
 
 
 main()
