@@ -158,6 +158,21 @@ def thresholdSet(l, start, end):
             
     return l
 
+#sets values within threshold if values arent specified within the flag variables
+def minMaxDealer(l, start, end):
+    check = 0
+    for i in range(len(l)):
+        if l[i] < 0:
+            try:
+                r = random.randint(start, end)
+            except:
+                check = 1
+                r = 4
+            l[i] = r
+    return l, check
+
+#deprecated
+'''
 #splits a specified insertion gap into 2 seperate values to be handled by each gene seperately
 #ie vd insertion = 5 -> v gets 3 nucleotides and d get 2 nucleotides
 #randomly assigns a value to both
@@ -175,7 +190,7 @@ def insertionDealer(insertion, minI, maxI):
         r = random.randint(0, insertion)
 
     return r, insertion - r
-
+'''
 
 #generate nucleotide sequence based on specificed base parition with <k> bases
 def addNuc(k):
@@ -223,16 +238,11 @@ def mutation (chain, m):
 
     return chain
 
-
 #randomly takes 1 value from each V,D, and J list and generates sequences
 #based on k iterations
 #if additions/deletions are specified, modify the gene respectively
 #also specifies the random seed
-def rPrint(gList, V, D, J, k, nav, ndv, nad5, nad3, ndd5, ndd3, naj, ndj, m, r):
-    
-    if isinstance(r, bool):
-        dt = datetime.now()
-        r = dt.microsecond
+def rPrint(gList, V, D, J, k, nucVar, m, r):
 
     #increment variable for sucessful creations of vdj
     inc = 0
@@ -242,30 +252,32 @@ def rPrint(gList, V, D, J, k, nav, ndv, nad5, nad3, ndd5, ndd3, naj, ndj, m, r):
     #navd = vd insertions
     #ndd5 = d5 deletions
     #ndd3 = d3 deletions
-    #navj = dj insetions
+    #nadj = dj insetions
     #ndj = j deletions
     #m = mutation rate
-    nucVariableList = ' '.join(['a:' + str(nav + nad5),'b:' + str(ndv),'c:' + str(ndd5),'d:' + str(ndd3),
-                       'e:' + str(nad3 + naj),'f:' + str(ndj), 'm:' + str(m)])
-
-    nucVariableList = ' '.join(['ndv:' + str(ndv),'navd:' + str(nav + nad5),'ndd5:' + str(ndd5),'ndd3:' + str(ndd3),
-                       'navj:' + str(nad3 + naj),'ndj:' + str(ndj), 'm:' + str(m)])
     
     while inc < k:
+
+        #additions
+        addL,checkA = minMaxDealer([nucVar[0], nucVar[1]], nucVar[6], nucVar[7])
+        #deletions
+        delL,checkD = minMaxDealer([nucVar[2], nucVar[3], nucVar[4], nucVar[5]], nucVar[8], nucVar[9])
+
+        nucVariableList = ', '.join(['ndv:' + str(delL[0]),'navd:' + str(addL[0]),'ndd5:' + str(delL[1]),
+                            'ndd3:' + str(delL[2]), 'nadj:' + str(addL[1]),'ndj:' + str(delL[3]), 'm:' + str(m)])
+
+        vdGap = ''.join(addNuc(addL[0]))
+        djGap = ''.join(addNuc(addL[1]))
 
         vKey = random.choice(gList[0])
         dKey = random.choice(gList[1])
         jKey = random.choice(gList[2])
 
-        vGene = randomNucMod(V[vKey], nav, ndv)
-        #tail modification
-        dGene = randomNucMod(D[dKey], nad3, ndd3)
-        #head modification
-        dGene = ''.join(reversed(randomNucMod(''.join(reversed(dGene)), nad5, ndd5)))
-
-        jGene = ''.join(reversed(randomNucMod(''.join(reversed(J[jKey])), naj, ndj)))
+        vGene = ''.join(V[vKey])[:-delL[0]]
+        dGene = ''.join(D[dKey])[delL[1]:-delL[2]]
+        jGene = ''.join(J[jKey])[delL[3]:]
         
-        combStr = "".join((vGene, dGene, jGene))
+        combStr = "".join([vGene, vdGap, dGene, djGap, jGene])
 
         #check for stop codons
         combStr = stopChecker(combStr)
@@ -276,8 +288,13 @@ def rPrint(gList, V, D, J, k, nav, ndv, nad5, nad3, ndd5, ndd3, naj, ndj, m, r):
             inc = inc + 1
         else:
             continue
-        
-        print ('>' + ", ".join((vKey, dKey, jKey, nucVariableList)))
+
+        if checkA == 1:
+            print ('* invalid start/end conditions for addition interval, defaulting to 4')
+        if checkD == 1:
+            print ('* invalid start/end conditions for deletion interval, defaulting to 4')
+            
+        print ('>' + ", ".join(('v:' + vKey, 'd:' + dKey, 'j:' + jKey, nucVariableList)))
         mutStr = mutation(combStr, m)
 
         print (mutStr)
@@ -343,19 +360,13 @@ def main():
     if args.rSeed:
         rNum = args.rSeed
     else:
-        rNum = False
+        dt = datetime.now()
+        rNum = dt.microsecond
 
     #applys random seed to every possible random var
     random.seed(rNum)
         
     m = percentMut(args.mut)
-
-    #random separator
-    vAddGap, d5AddGap = insertionDealer(args.navd, args.minI, args.maxI)
-    jAddGap, d3AddGap = insertionDealer(args.nadj, args.minI, args.maxI)
-
-    delL = thresholdSet([args.ndv, args.ndd5, args.ndd3, args.ndj], args.minD, args.maxD)
-
     
     vFile = open(args.vGene, 'r')
     dFile = open(args.dGene, 'r')
@@ -371,8 +382,10 @@ def main():
     else:
         gList = (list(dictV.keys()), list(dictD.keys()), list(dictJ.keys()))
 
-    rPrint (gList, dictV, dictD, dictJ, args.kIter, vAddGap, delL[0], d5AddGap, d3AddGap,
-            delL[1], delL[2], jAddGap, delL[3], m, rNum)
+    nucVariables = [args.navd, args.nadj, args.ndv, args.ndd5,
+            args.ndd3, args.ndj, args.minI, args.maxI, args.minD, args.maxD]
+
+    rPrint (gList, dictV, dictD, dictJ, args.kIter, nucVariables, m, rNum)
 
 
 main()
